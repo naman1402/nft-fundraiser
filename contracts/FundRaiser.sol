@@ -1,24 +1,18 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
+// CUSTOM ERRORS
+error FundRaiser_NotOwnerOfNFT();
+error FundRaiser_Completed();
+error FundRaiser_ZeroDonation();
+error FundRaiser_CampaignNotExists();
+error FundRaiser_OverPaid();
+error FundRaiser_NotEnoughRaised();
+error FundRaiser_TransferFailed();
+
 contract FundRaiser is ERC721URIStorage{
-
-    error FundRaiser_NotOwnerOfNFT();
-    error FundRaiser_Completed();
-    error FundRaiser_ZeroDonation();
-    error FundRaiser_CampaignNotExists();
-    error FundRaiser_OverPaid();
-    error FundRaiser_NotEnoughRaised();
-    error FundRaiser_TransferFailed();
-
-    event StartCampaign(address indexed owner, uint256 indexed id, uint256 reqAmount, uint256 when);
-    event ExtendCampaign(address indexed owner, uint256 indexed id,  uint256 additionalAmount);
-    event Donation(address indexed donationFrom, uint256 indexed id, uint256 amount);
-    event Withdraw(address indexed withdrawTo, uint256 indexed id, uint256 amount);
-    event EndCampaign(uint256 indexed id);
-    
 
     struct C {
         uint256 amtRaised;
@@ -27,8 +21,14 @@ contract FundRaiser is ERC721URIStorage{
         uint256 started;
     }
 
+    event StartCampaign(address indexed owner, uint256 indexed id, uint256 reqAmount, uint256 when);
+    event ExtendCampaign(address indexed owner, uint256 indexed id,  uint256 additionalAmount);
+    event Donation(address indexed donationFrom, uint256 indexed id, uint256 amount);
+    event Withdraw(address indexed withdrawTo, uint256 indexed id, uint256 amount);
+    event EndCampaign(uint256 indexed id);
+    
     mapping(uint256 => C) private s_IdToCampaign;
-    uint256 s_id;
+    uint256 private s_id;
 
     constructor() ERC721("FundRaiser", "FRC") {}
 
@@ -40,16 +40,18 @@ contract FundRaiser is ERC721URIStorage{
     }
 
     modifier campaignCompleted(uint256 id) {
-        if(s_IdToCampaign[id].completed == true) {
+        if(s_IdToCampaign[id].completed) {
             revert FundRaiser_Completed();
         }
         _;
     }
 
+    // starts campaign, URI is the IPFS hash of metadata
     function startCampaign(string calldata URI, uint256 amount) external {
         s_id ++;
-        _setTokenURI(s_id, URI);
         _safeMint(msg.sender, s_id);
+        _setTokenURI(s_id, URI);
+
         s_IdToCampaign[s_id].reqAmt = amount;
         s_IdToCampaign[s_id].started = block.timestamp;
 

@@ -5,7 +5,6 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers"
 import { assert } from "console"
 import { deployContract } from "@nomicfoundation/hardhat-ethers/types"
 import { expect } from "chai"
-import exp from "constants"
 
 describe("Fundraiser Test", () => {
     let tokenURI = "www.google.com"
@@ -79,7 +78,22 @@ describe("Fundraiser Test", () => {
     })
 
     describe("donateCampaign", () => {
-        
+        let oneEth = parseEther("1")
+        beforeEach(async () => {
+            await fundraiser.startCampaign(tokenURI, requiredAmt)
+        })
+
+        it("check notCompleted modifier", async () => {
+            let txn = await fundraiser.endCampaign(1)
+            await txn.wait()
+            await expect(fundraiser.connect(user).donateToCampaign(1)).to.be.revertedWithCustomError(fundraiser, "FundRaiser_Completed")
+        })
+        it("check ZeroDonation error", async() => {
+            await expect(fundraiser.connect(user).donateToCampaign(1)).to.be.revertedWithCustomError(fundraiser, "FundRaiser_ZeroDonation")
+        })
+        it("check OverPaid error", async () => {
+            await expect(fundraiser.connect(user).donateToCampaign(1, {value: parseEther("11") })).to.revertedWithCustomError(fundraiser, "FundRaiser_OverPaid")
+        })
     })
 })
 
